@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>Pawbrook</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: white;
+	background-color: black;
+	overflow: hidden;
+	touch-action: none;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+#status, #status-splash, #status-progress {
+	position: absolute;
+	left: 0;
+	right: 0;
+}
+
+#status, #status-splash {
+	top: 0;
+	bottom: 0;
+}
+
+#status {
+	background-color: #242424;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	visibility: hidden;
+}
+
+#status-splash {
+	max-height: 100%;
+	max-width: 100%;
+	margin: auto;
+}
+
+#status-splash.show-image--false {
+	display: none;
+}
+
+#status-splash.fullsize--true {
+	height: 100%;
+	width: 100%;
+	object-fit: contain;
+}
+
+#status-splash.use-filter--false {
+	image-rendering: pixelated;
+}
+
+#status-progress, #status-notice {
+	display: none;
+}
+
+#status-progress {
+	bottom: 10%;
+	width: 50%;
+	margin: 0 auto;
+}
+
+#status-notice {
+	background-color: #5b3943;
+	border-radius: 0.5rem;
+	border: 1px solid #9b3943;
+	color: #e0e0e0;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	line-height: 1.3;
+	margin: 0 2rem;
+	overflow: hidden;
+	padding: 1rem;
+	text-align: center;
+	z-index: 1;
+}
+		</style>
+		<link id="-gd-engine-icon" rel="icon" type="image/png" href="asset-b2f19b55d329be16c4c9.icon.png" />
+<link rel="apple-touch-icon" href="asset-cf54dbef0aa22ed0a664.apple-touch-icon.png"/>
+
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
+
+		<div id="status">
+			<img id="status-splash" class="show-image--true fullsize--true use-filter--true" src="asset-3cb4495c0b98dfbe4b66.png" alt="">
+			<progress id="status-progress"></progress>
+			<div id="status-notice"></div>
+		</div>
+
+		<script>const PAWBROOK_ASSETS = {"index.pck":{"file":"asset-ed499c2d901520985ef4.pck","sha256":"ed499c2d901520985ef4893f9760092a7184d00007505d00deadf1f4942c545b","size":160212,"type":"application/octet-stream"},"engine-d6cff0bb6541ddcad7cc.wasm":{"file":"engine-d6cff0bb6541ddcad7cc.wasm","sha256":"a5c75e713afd32b2dee58ce77c9aa6677c48c717fae4042dd2fa1e6c9e06209a","size":23225591,"type":"application/wasm","brotli":"engine-d6cff0bb6541ddcad7cc.wasm.br"}};
+/* PAWBROOK_ASSETS is generated from the exported bytes, never hand-maintained. */
+(() => {
+  'use strict';
+  const nativeFetch = window.fetch.bind(window);
+  const cacheName = 'pawbrook-downloads-v1';
+  const assets = PAWBROOK_ASSETS;
+  let cachePromise = null;
+  const cache = () => cachePromise ||= (async () => {
+    try { return await caches.open(cacheName); } catch { return null; }
+  })();
+  const supportsBrotli = (() => {
+    try { new DecompressionStream('brotli'); return true; } catch { return false; }
+  })();
+  const hex = bytes => [...new Uint8Array(bytes)].map(x => x.toString(16).padStart(2, '0')).join('');
+  async function checked(response, asset, compressed = false) {
+    if (!response.ok) throw new Error(`Download failed (${response.status})`);
+    const body = compressed ? response.body.pipeThrough(new DecompressionStream('brotli')) : response.body;
+    const reader = body.getReader();
+    const chunks = [];
+    let length = 0;
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > asset.size) { await reader.cancel(); throw new Error('Unexpected asset size'); }
+      chunks.push(value);
+      window.dispatchEvent(new CustomEvent('pawbrook-download', {detail:{loaded:length,total:asset.size}}));
+    }
+    if (length !== asset.size) throw new Error('Incomplete download');
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+    if (crypto.subtle && hex(await crypto.subtle.digest('SHA-256', bytes)) !== asset.sha256) {
+      throw new Error('Download checksum mismatch');
+    }
+    return new Response(bytes, {headers:{'Content-Type':asset.type,'Content-Length':String(length)}});
+  }
+  window.fetch = async function(input, options) {
+    const url = new URL(input instanceof Request ? input.url : input, location.href);
+    const name = url.pathname.slice(url.pathname.lastIndexOf('/') + 1);
+    const asset = url.origin === location.origin && url.pathname === new URL(name, location.href).pathname ? assets[name] : null;
+    if (!asset || (options?.method && options.method !== 'GET')) return nativeFetch(input, options);
+    const key = new URL(asset.file, location.href).href;
+    const storage = await cache();
+    const hit = await storage?.match(key).catch(() => null);
+    if (hit && Number(hit.headers.get('Content-Length')) === asset.size) return hit;
+    let response;
+    if (supportsBrotli && asset.brotli) {
+      try { response = await checked(await nativeFetch(asset.brotli, options), asset, true); }
+      catch (error) { console.warn('Compressed download unavailable; using standard download.', error); }
+    }
+    response ||= await checked(await nativeFetch(asset.file, options), asset);
+    // Cache only complete, verified bytes. Quota/private-mode failures never block play.
+    if (storage) {
+      try {
+        await storage.put(key, response.clone());
+        // Keep the current and previous payload of each type, not an ever-growing history.
+        const peers = (await storage.keys()).filter(request => new URL(request.url).pathname.endsWith(name.endsWith('.wasm') ? '.wasm' : '.pck'));
+        for (const old of peers.slice(0, -2)) if (old.url !== key) await storage.delete(old);
+      } catch (error) { console.warn('Download cache unavailable.', error); }
+    }
+    return response;
+  };
+  window.addEventListener('pawbrook-download', ({detail}) => {
+    const progress = document.getElementById('status-progress');
+    if (progress) { progress.max = detail.total; progress.value = detail.loaded; }
+  });
+  // The worker caches the small shell, not saves or duplicate engine downloads.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).catch(error => console.warn('Offline shell unavailable.', error));
+    });
+  }
+})();
+</script>
+<script src="engine-d6cff0bb6541ddcad7cc.js"></script>
+		<script>
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"engine-d6cff0bb6541ddcad7cc","experimentalVK":false,"fileSizes":{"index.pck":160212,"engine-d6cff0bb6541ddcad7cc.wasm":23225591},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"mainPack":"index.pck"};
+const GODOT_THREADS_ENABLED = false;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusProgress = document.getElementById('status-progress');
+	const statusNotice = document.getElementById('status-notice');
+
+	let initializing = true;
+	let statusMode = '';
+
+	function setStatusMode(mode) {
+		if (statusMode === mode || !initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			statusOverlay.remove();
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusMode = mode;
+	}
+
+	function setStatusNotice(text) {
+		while (statusNotice.lastChild) {
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const lines = text.split('\n');
+		lines.forEach((line) => {
+			statusNotice.appendChild(document.createTextNode(line));
+			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		if (err instanceof Error) {
+			setStatusNotice(err.message);
+		} else if (typeof err === 'string') {
+			setStatusNotice(err);
+		} else {
+			setStatusNotice('An unknown error occurred.');
+		}
+		setStatusMode('notice');
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
+			let serviceWorkerRegistrationPromise;
+			try {
+				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
+			} catch (err) {
+				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
+			}
+			// There's a chance that installing the service worker would fix the issue
+			Promise.race([
+				serviceWorkerRegistrationPromise.then((registration) => {
+					if (registration != null) {
+						return Promise.reject(new Error('Service worker already exists.'));
+					}
+					return registration;
+				}).then(() => engine.installServiceWorker()),
+				// For some reason, `getRegistration()` can stall
+				new Promise((resolve) => {
+					setTimeout(() => resolve(), 2000);
+				}),
+			]).then(() => {
+				// Reload if there was no error.
+				window.location.reload();
+			}).catch((err) => {
+				console.error('Error while registering service worker:', err);
+			});
+		} else {
+			// Display the message as usual
+			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+			displayFailureNotice(missingMsg + missing.join('\n'));
+		}
+	} else {
+		setStatusMode('progress');
+		engine.startGame({
+			'onProgress': function (current, total) {
+				if (current > 0 && total > 0) {
+					statusProgress.value = current;
+					statusProgress.max = total;
+				} else {
+					statusProgress.removeAttribute('value');
+					statusProgress.removeAttribute('max');
+				}
+			},
+		}).then(() => {
+			setStatusMode('hidden');
+		}, displayFailureNotice);
+	}
+}());
+		</script>
+	</body>
+</html>
+

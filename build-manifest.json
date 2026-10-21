@@ -1,0 +1,18 @@
+{
+  "version": "66f2bdc7db18d0d07b6f",
+  "assets": {
+    "index.pck": {
+      "file": "asset-ed499c2d901520985ef4.pck",
+      "sha256": "ed499c2d901520985ef4893f9760092a7184d00007505d00deadf1f4942c545b",
+      "size": 160212,
+      "type": "application/octet-stream"
+    },
+    "engine-d6cff0bb6541ddcad7cc.wasm": {
+      "file": "engine-d6cff0bb6541ddcad7cc.wasm",
+      "sha256": "a5c75e713afd32b2dee58ce77c9aa6677c48c717fae4042dd2fa1e6c9e06209a",
+      "size": 23225591,
+      "type": "application/wasm",
+      "brotli": "engine-d6cff0bb6541ddcad7cc.wasm.br"
+    }
+  }
+}
